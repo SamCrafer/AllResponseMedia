@@ -1,0 +1,198 @@
+
+use test__sc
+
+if object_id('trainer_class_schedule') is null
+begin
+create table 
+	 trainer_class_schedule
+	(
+	trainerid int 
+	,starttime datetime
+	,endtime   datetime 
+	)
+end
+
+if (select count(*) from trainer_class_schedule) = 0
+begin
+	
+	--: insert values where none exist :--
+	insert into 
+		trainer_class_schedule
+	values 
+		 (1234,'01/10/2018 08:30','01/10/2018 09:00')
+		,(1234,'01/10/2018 08:45','01/10/2018 09:15')
+		,(1234,'01/10/2018 09:30','01/10/2018 10:00')
+		,(2345,'01/10/2018 08:45','01/10/2018 09:15')
+		,(2345,'01/10/2018 09:30','01/10/2018 10:00')
+		,(2345,'01/10/2018 10:50','01/10/2018 11:00')
+		,(2345,'01/10/2018 09:50','01/10/2018 10:00')
+
+		--: a very overkill index with very overkill compression added, as table grows that join will get quite slow,	 :--
+		--: might even make sense to add a non-clustered on start and end dates so the indexes can work together in 	 :--
+		--: the query below                                                                                            :--     
+		create clustered index idx__cl__trainer_id on trainer_class_schedule (trainerid) with (data_compression=page)
+
+		--: add compression just to save space incase of future growth :--
+		create nonclustered index idx__ncl__start_end_date on trainer_class_schedule (starttime,endtime) with (data_compression=page)
+
+end
+
+--: join table on itself so date comparison can be made :--
+
+--: this table suffers from not having a class id relying far too heavily on the dates :--
+select 
+	a.*
+from 
+	trainer_class_schedule a 
+	join trainer_class_schedule b 
+		on a.trainerid = b.trainerid
+where
+	a.starttime < b.endtime
+	and a.starttime > b.starttime
+	and
+	 (a.starttime <> b.starttime
+	 or a.endtime <> b.endtime)
+
+
+--: improved :--
+if object_id('trainer_class_schedule_improved') is null
+begin
+create table 
+	 trainer_class_schedule_improved
+	(
+	 trainerid      int 
+	,trainerclassid int
+	,starttime datetime
+	,endtime   datetime 
+	)
+end
+
+if (select count(*) from trainer_class_schedule_improved) = 0
+begin
+	
+	--: insert values where none exist :--
+	insert into 
+		trainer_class_schedule_improved
+	values 
+		 (1234,1,'01/10/2018 08:30','01/10/2018 09:00')
+		,(1234,2,'01/10/2018 08:45','01/10/2018 09:15')
+		,(1234,3,'01/10/2018 09:30','01/10/2018 10:00')
+		,(2345,1,'01/10/2018 08:45','01/10/2018 09:15')
+		,(2345,2,'01/10/2018 09:30','01/10/2018 10:00')
+		,(2345,3,'01/10/2018 10:50','01/10/2018 11:00')
+		,(2345,4,'01/10/2018 09:50','01/10/2018 10:00')
+
+		--: a very overkill index with very overkill compression added, as table grows that join will get quite slow,	 :--
+		--: might even make sense to add a non-clustered on start and end dates so the indexes can work together in 	 :--
+		--: the query below                                                                                            :--     
+		create clustered index idx__cl__trainer_id on trainer_class_schedule_improved (trainerid) with (data_compression=page)
+
+		--: add compression just to save space incase of future growth :--
+		create nonclustered index idx__ncl__start_end_date on trainer_class_schedule_improved (starttime,endtime) with (data_compression=page)
+
+		--: create unique index to ensure the table has no dupes :--
+		create unique index idx__u__trainerid_start_date_end_date on trainer_class_schedule_improved (trainerid,starttime,endtime) with (data_compression=page)
+
+end
+
+--: join table on itself so date comparison can be made :--
+
+--: this table suffers from not having a class id relying far too heavily on the dates :--
+select 
+	 a.trainerid
+	,a.starttime
+	,a.endtime
+from 
+	trainer_class_schedule_improved a 
+	join trainer_class_schedule_improved b 
+		on a.trainerid = b.trainerid
+where
+	a.starttime < b.endtime
+	and a.starttime >= b.starttime
+	and a.trainerclassid <> b.trainerclassid
+
+
+if object_id('trainer_class_schedule_improved_v2') is null
+begin
+create table 
+	 trainer_class_schedule_improved_v2
+	(
+	 trainerid      int 
+	,trainerclassid int
+	,starttime datetime
+	,endtime   datetime 
+	)
+end
+
+if (select count(*) from trainer_class_schedule_improved_v2) = 0
+begin
+	
+	--: insert values where none exist :--
+-- Insert statement to populate trainer_class_schedule_improved with a larger dataset including clashes
+insert into		
+	trainer_class_schedule_improved_v2 
+values
+    (1234, 1,  '2018-01-10 08:30', '2018-01-10 09:00'),
+    (1234, 2,  '2018-01-10 08:45', '2018-01-10 09:15'),
+    (1234, 3,  '2018-01-10 09:30', '2018-01-10 10:00'),
+    (1234, 4,  '2018-01-10 09:45', '2018-01-10 10:15'),
+    (1234, 5,  '2018-01-10 10:45', '2018-01-10 11:15'),
+    (1234, 6,  '2018-01-10 11:30', '2018-01-10 12:00'),
+    (1234, 7,  '2018-01-10 12:15', '2018-01-10 12:45'),
+    (1234, 8,  '2018-01-11 08:30', '2018-01-11 09:00'),
+    (1234, 9,  '2018-01-11 09:15', '2018-01-11 09:45'),
+    (1234, 10, '2018-01-11 10:00', '2018-01-11 10:30'),
+		(2345, 1,  '2018-01-10 08:45', '2018-01-10 09:15'),
+    (2345, 2,  '2018-01-10 09:30', '2018-01-10 10:00'),
+    (2345, 3,  '2018-01-10 10:50', '2018-01-10 11:00'),
+    (2345, 4,  '2018-01-10 09:30', '2018-01-10 09:45'),
+    (2345, 5,  '2018-01-10 11:30', '2018-01-10 12:00'),
+    (2345, 6,  '2018-01-10 13:00', '2018-01-10 13:30'),
+    (2345, 7,  '2018-01-10 10:30', '2018-01-10 10:45'),
+    (2345, 8 , '2018-01-11 08:45', '2018-01-11 09:15'),
+    (2345, 9 , '2018-01-11 09:30', '2018-01-11 10:00'),
+    (2345, 10, '2018-01-11 10:45', '2018-01-11 11:15'),
+    (1234, 11, '2018-01-12 08:30', '2018-01-12 09:00'),
+    (1234, 12, '2018-01-12 08:45', '2018-01-12 09:15'),
+    (1234, 13, '2018-01-12 09:30', '2018-01-12 10:00'),
+    (1234, 14, '2018-01-12 09:45', '2018-01-12 10:15'),
+    (1234, 15, '2018-01-12 10:45', '2018-01-12 11:15'),
+    (1234, 16, '2018-01-12 11:30', '2018-01-12 12:00'),
+    (1234, 17, '2018-01-12 12:15', '2018-01-12 12:45'),
+    (2345, 11, '2018-01-12 08:45', '2018-01-12 09:15'),
+    (2345, 12, '2018-01-12 09:30', '2018-01-12 10:00'),
+    (2345, 13, '2018-01-12 10:50', '2018-01-12 11:00'),
+    (2345, 14, '2018-01-12 09:30', '2018-01-12 09:45'),
+    (2345, 15, '2018-01-12 11:30', '2018-01-12 12:00'),
+    (2345, 16, '2018-01-12 13:00', '2018-01-12 13:30'),
+    (2345, 17, '2018-01-12 10:30', '2018-01-12 10:45');
+
+
+		--: a very overkill index with very overkill compression added, as table grows that join will get quite slow	 :--  
+		create clustered index idx__cl__trainer_id on trainer_class_schedule_improved_v2 (trainerid) with (data_compression=page)
+
+		--: non clustered on the comparison columns, add compression just to save space incase of future growth :--
+		create nonclustered index idx__ncl__start_end_date on trainer_class_schedule_improved_v2 (starttime,endtime) with (data_compression=page)
+
+		--: create unique index to ensure the table has no dupes :--
+		create unique index idx__u__trainerid_start_date_end_date on trainer_class_schedule_improved_v2 (trainerid,starttime,endtime) with (data_compression=page)
+
+end
+
+--: join table on itself so date comparison can be made :--
+
+--: this table suffers from not having a class id relying far too heavily on the dates :--
+select 
+	 *
+from 
+	trainer_class_schedule_improved_v2 a 
+	join trainer_class_schedule_improved_v2 b 
+		on a.trainerid = b.trainerid 
+where
+	1=1
+	and a.starttime <= b.endtime
+	and a.starttime >= b.starttime
+	and a.trainerclassid <> b.trainerclassid
+
+
+
