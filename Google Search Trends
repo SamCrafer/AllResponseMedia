@@ -1,0 +1,54 @@
+import pandas as pd
+import plotly.express as px
+from pytrends.request import TrendReq
+
+# Set pandas option to opt-in to future behavior
+pd.set_option('future.no_silent_downcasting', True)
+
+# Initialize pytrends
+pytrends = TrendReq(hl='en-UK', tz=0)  
+
+# Define the keywords to search for
+kw_list = ["football", "rugby", "tennis"]
+
+# Build the payload with the specified timeframe for UK
+pytrends.build_payload(kw_list,
+                       cat=0,
+                       timeframe='today 3-m',
+                       geo='GB',
+                       gprop='')
+
+#Can include varying levels of resolution
+#pytrends.interest_by_region(resolution='COUNTRY', inc_low_vol=True, inc_geo_code=False)
+
+# Fetch the interest over time
+interest_over_time_df = pytrends.interest_over_time()
+
+#index for plot 
+interest_over_time_df.reset_index(inplace=True)
+
+# Plot the data using plotly, center title
+fig = px.line(interest_over_time_df,
+              x='date',
+              y=kw_list, 
+              title='Interest Over Time: Football, Rugby, and Tennis in the UK',
+              labels={'value': 'Search Interest',
+                      'date': 'Date'}
+              )
+# Specify other layout parameters
+fig.update_layout(xaxis_title='Date', yaxis_title='Search Interest', legend_title='Search Terms',
+                  plot_bgcolor='white',  
+                  paper_bgcolor='white', 
+                  title_x=0.5,  
+                  title_y=0.95, 
+                  title_font=dict(size=20,        
+                                   color='black', 
+                                   family='Arial',
+                                   weight='bold'  
+                                   )
+                  )
+# Update x-axis and y-axis with axis lines
+fig.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True)
+fig.update_yaxes(showline=True, linewidth=1, linecolor='black', mirror=True)
+fig.write_image('interest_over_time.png', width=1200, height=800)  
+
