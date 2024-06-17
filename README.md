@@ -6,7 +6,10 @@
 
 **Google Search Trends**
   - Produce a plot of popularity of certain key words over time, obviosuly with the euros the plots are pretty skewed! I have used a pytrends but there are seemingly endless ways to approach this question. To display 
-    the data I have just 
+    the data I have just created a png so I can easily display the comparison between my codes outpt and googles - google trends page.
 
-Image generated from google trends question:
-![image](https://github.com/SamCrafer/AllResponseMedia/assets/122836680/0740ca7a-9e86-4dcf-95ba-546faf7afdc2)
+    below is the output from the website:
+    ![image](https://github.com/SamCrafer/AllResponseMedia/assets/122836680/9a877302-f269-4e14-b974-03b6dd737dd5)
+
+    Image generated from google trends code:
+    ![image](https://github.com/SamCrafer/AllResponseMedia/assets/122836680/0740ca7a-9e86-4dcf-95ba-546faf7afdc2)
